@@ -1,0 +1,13 @@
+import assert from 'node:assert';
+import { mockKit, check, weekday } from './lib.js';
+import { readFileSync } from 'node:fs';
+const b = JSON.parse(readFileSync('./public/sample.json'));
+assert.equal(weekday('2026-11-19','zh'), '四');
+const kit = mockKit(b);
+const errs = check(b, kit).filter(i=>i.level==='error');
+assert.equal(errs.length, 0, JSON.stringify(errs));
+const bad = { ...kit, line: '2026/11/19 (五) 見' };
+assert.ok(check(b, bad).some(i=>/weekday/.test(i.msg)));
+const miss = check({ ...b, speaker: '' }, mockKit({ ...b, speaker: '' }));
+assert.ok(miss.some(i=>/speaker/.test(i.msg)));
+console.log('all tests passed');

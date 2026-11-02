@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ClubFree</title>
+<style>body{font-family:system-ui,sans-serif;margin:0;background:#f8fafc;color:#0f172a}header{background:#111827;color:#fff;padding:14px 24px;display:flex;gap:16px;align-items:center}header h1{margin:0;font-size:22px}.badge{background:#2563eb;padding:2px 8px;border-radius:9px;font-size:12px}main{display:grid;grid-template-columns:380px 1fr;gap:20px;padding:20px}@media(max-width:900px){main{grid-template-columns:1fr}}label{display:block;font-size:13px;margin-top:8px;font-weight:600}input,textarea{width:100%;box-sizing:border-box;padding:6px;border:1px solid #cbd5e1;border-radius:6px}button{padding:8px 14px;border:0;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;margin-top:10px}button.ghost{background:#e2e8f0;color:#0f172a}.tabs button{background:#e2e8f0;color:#0f172a;margin:0 4px 4px 0}.tabs button.on{background:#2563eb;color:#fff}pre{white-space:pre-wrap;background:#fff;border:1px solid #e2e8f0;padding:12px;border-radius:6px}iframe{width:100%;height:520px;border:1px solid #e2e8f0;background:#fff}.iss{padding:6px 10px;border-radius:6px;margin:4px 0;font-size:14px}.error{background:#fee2e2}.warn{background:#fef9c3}.ok{background:#dcfce7}</style></head>
+<body><header><h1>ClubFree</h1><span id="tag"></span><span class="badge" id="mode">…</span><span style="flex:1"></span><button class="ghost" id="lang">English</button></header>
+<main><section id="form"></section><section><div class="tabs" id="tabs"></div><div id="out"></div><h3 id="chkT"></h3><div id="issues"></div></section></main>
+<script type="module">
+const I18N={zh:{tag:'用 AI 把社團幹部從文案地獄解放',club:'社團名稱',title:'活動名稱',speaker:'講者',date:'日期',time:'時間 (HH:MM-HH:MM)',venue:'地點',deadline:'報名截止',agenda:'流程',description:'活動介紹',signupLink:'報名連結',gen:'一鍵產生全套',sample:'載入範例',chk:'規則檢查',none:'✅ 沒有發現問題',signupForm:'報名表單',announcementEmail:'預告信',line:'Line',instagram:'IG',reminderEmail:'當日提醒信',feedbackForm:'回饋表單',thankYouEmail:'感謝信',copy:'複製',sw:'English'},
+en:{tag:'Free club officers from copywriting hell with AI.',club:'Club name',title:'Event title',speaker:'Speaker',date:'Date',time:'Time (HH:MM-HH:MM)',venue:'Venue',deadline:'Signup deadline',agenda:'Agenda',description:'Description',signupLink:'Signup link',gen:'Generate full kit',sample:'Load sample',chk:'Rule check',none:'✅ No issues found',signupForm:'Signup form',announcementEmail:'Announcement email',line:'Line',instagram:'Instagram',reminderEmail:'Day-of reminder',feedbackForm:'Feedback form',thankYouEmail:'Thank-you email',copy:'Copy',sw:'中文'}};
+const F=['club','title','speaker','date','time','venue','deadline','agenda','description','signupLink'];
+let lang='zh',kit=null,issues=[],cur='announcementEmail',vals={};
+const $=id=>document.getElementById(id);
+function renderForm(){const t=I18N[lang];$('tag').textContent=t.tag;$('lang').textContent=t.sw;
+$('form').innerHTML=F.map(f=>`<label>${t[f]}</label>`+(['agenda','description'].includes(f)?`<textarea id="f_${f}" rows="4"></textarea>`:`<input id="f_${f}" ${f==='date'?'type="date"':''}>`)).join('')+`<button id="gen">${t.gen}</button> <button class="ghost" id="smp">${t.sample}</button>`;
+F.forEach(f=>{$('f_'+f).value=vals[f]||'';$('f_'+f).oninput=e=>vals[f]=e.target.value});
+$('gen').onclick=gen;$('smp').onclick=async()=>{vals=await (await fetch('sample.json')).json();renderForm()};renderOut()}
+function renderOut(){const t=I18N[lang];if(!kit)return;$('tabs').innerHTML=Object.keys(kit).map(k=>`<button class="${k===cur?'on':''}" data-k="${k}">${t[k]||k}</button>`).join('');
+$('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{cur=b.dataset.k;renderOut()});
+const v=kit[cur];$('out').innerHTML=`<button class="ghost" id="cp">${t.copy}</button>`+(/Email$/.test(cur)?'<iframe id="fr"></iframe>':`<pre></pre>`);
+if(/Email$/.test(cur))$('fr').srcdoc=v;else $('out').querySelector('pre').textContent=v;$('cp').onclick=()=>navigator.clipboard.writeText(v);
+$('chkT').textContent=t.chk;$('issues').innerHTML=issues.length?issues.map(i=>`<div class="iss ${i.level}">${i.level==='error'?'❌':'⚠️'} ${i.where?'['+(t[i.where]||i.where)+'] ':''}${i.msg}</div>`).join(''):`<div class="iss ok">${t.none}</div>`}
+async function gen(){$('gen').disabled=true;try{const r=await (await fetch('/api/generate',{method:'POST',body:JSON.stringify({brief:vals,lang})})).json();kit=r.kit;issues=r.issues;$('mode').textContent=r.mode;renderOut()}finally{$('gen').disabled=false}}
+$('lang').onclick=()=>{lang=lang==='zh'?'en':'zh';document.documentElement.lang=lang==='zh'?'zh-Hant':'en';renderForm();if(kit)gen()};
+fetch('/api/status').then(r=>r.json()).then(s=>$('mode').textContent=s.mode==='demo'?'Demo mode (no API key)':s.mode);renderForm();
+if(location.hash==="#demo"){vals=await (await fetch("sample.json")).json();renderForm();await gen()}
+</script></body></html>
